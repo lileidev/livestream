@@ -1,9 +1,15 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <iostream>
+#include <cstdio>
+#include <string>
 #include <cstddef>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
-const unsigned char MAX_DEV_NAME_LENGTH = 16;
+using std::string;
 
 struct buffer {
         void   *start;
@@ -12,8 +18,8 @@ struct buffer {
 
 class Camera {
 public:
-    Camera() {;}
-    Camera(const char *name) {;}
+    Camera() : dev_name("/dev/video0") {};
+    Camera(const string name) : dev_name(name) {};
     void process_image(const void *p, int size);
     int read_frame(void);
     void stop_capturing(void);
@@ -23,10 +29,10 @@ public:
     void init_mmap(void);
     void init_device(void);
     void close_device(void);
-    void open_device(void);
+    int open_device(void);
 
 private:
-    char dev_name[MAX_DEV_NAME_LENGTH];
+    string dev_name;
     int fd{-1};
     buffer *buffers;
     unsigned int n_buffers;
