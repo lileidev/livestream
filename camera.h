@@ -8,8 +8,22 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/videodev2.h>
 
 using std::string;
+
+#define CLEAR(x) memset(&(x), 0, sizeof(x))
+
+int xioctl(int fh, int request, void *arg){
+    int r; 
+
+    do{
+        r = ioctl(fh, request, arg);
+    }while(r == -1 && errno == EINTR);
+
+    return r;
+}
 
 struct buffer {
         void   *start;
@@ -27,7 +41,7 @@ public:
     void uninit_device(void);
     void init_read(unsigned int buffer_size);
     void init_mmap(void);
-    void init_device(void);
+    int init_device(void);
     void close_device(void);
     int open_device(void);
 
