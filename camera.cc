@@ -21,6 +21,19 @@ int Camera::open_device(void){
     return 0;
 }
 
+int Camera::close_device(void){
+    if(close(fd) == -1)
+    {
+        fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno, strerror(errno));
+        return -1;
+    }
+
+    fd = -1;
+
+    return 0;
+}
+
+
 int Camera::init_device(void){
     struct v4l2_capability cap;
     struct v4l2_cropcap cropcap;
@@ -61,5 +74,100 @@ int Camera::init_device(void){
         return -1;
     }
 
-    
+    min = fmt.fmt.pix.width * 2;
+    if(fmt.fmt.pix.bytesperline < min)
+        fmt.fmt.pix.bytesperline = min;
+    min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
+    if(fmt.fmt.pix.sizeimage < min)
+        fmt.fmt.pix.sizeimage = min;
+
+    init_mmap();
+}
+
+int Camera::uninit_device(void){
+    unsigned int i;
+
+    for(i = 0; i < n_buffers; i++){
+        if(munmap(buffers[i].start, buffers[i].length)){
+            fprintf(stderr, "%s error %d, %s\n", "munmap", errno, strerror(errno));
+            return -1;
+        }
+    }
+
+    free(buffers);
+
+    return 0;
+}
+
+int Camera::init_mmap(){
+    struct v4l2_requestbuffers req;
+
+    CLEAR(req);
+
+    req.count = 4;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory = V4L2_MEMORY_MMAP;
+
+    if(xioctl(fd, VIDIOC_REQBUFS, &req)){
+        if(errno == EINVAL) {
+            fprintf(stderr, "%s does not support memory mapping\n", dev_name);
+            return -1;
+        } else {
+            fprintf(stderr, "%s error %d, %s\n", "VIDIOC_REQBUFS", errno, strerror(errno));
+            return -1;
+        }
+    }
+
+    if(req.count < 2){
+        fprintf(stderr, "Insufficient buffer memory on %s\n", dev_name);
+        return -1;
+    }
+
+    buffers = (struct buffer*)calloc(req.count, sizeof(*buffers));
+    if(!buffers){
+        fprintf(stderr, "Out of memory\n");
+        return -1;
+    }
+
+    for(n_buffers = 0; n_buffers < req.count; ++n_buffers){
+        struct v4l2_buffer buf;
+        CLEAR(buf);
+        
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = n_buffers;
+
+        if(xioctl(fd, VIDIOC_QUERYBUF, &buf)){
+            fprintf(stderr, "%s error %d, %s\n", "VIDIOC_QUERYBUF", errno, strerror(errno));
+            return -1;
+        }
+
+        buffers[n_buffers].length = buf.length;
+        buffers[n_buffers].start = mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, buf.m.offset);
+        if(MAP_FAILED == buffers[n_buffers].start){
+            fprintf(stderr, "%s error %d, %s\n", "mmap", errno, strerror(errno));
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int Camera::init_read(unsigned int buffer_size){
+    buffers = (struct buffer*)calloc(1, sizeof(*buffers));
+
+    if(!buffers){
+        fprintf(stderr, "Out of memory\n");
+        return -1;
+    }   
+
+    buffers[0].length = buffer_size;
+    buffers[0].start = malloc(buffer_size);
+
+    if(!buffers[0].start){
+        fprintf(stderr, "Out of memory\n");
+        return -1;
+    }
+
+    return 0;
 }

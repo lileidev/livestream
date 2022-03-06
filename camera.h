@@ -7,8 +7,11 @@
 #include <cstddef>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <linux/videodev2.h>
 
 using std::string;
@@ -38,17 +41,17 @@ public:
     int read_frame(void);
     void stop_capturing(void);
     void start_capturing(void);
-    void uninit_device(void);
-    void init_read(unsigned int buffer_size);
-    void init_mmap(void);
+    int uninit_device(void);
+    int init_read(unsigned int buffer_size);
+    int init_mmap(void);
     int init_device(void);
-    void close_device(void);
+    int close_device(void);
     int open_device(void);
 
 private:
     string dev_name;
     int fd{-1};
-    buffer *buffers;
+    struct buffer *buffers;
     unsigned int n_buffers;
     int out_buf;
     int force_format;
