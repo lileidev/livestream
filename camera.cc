@@ -56,4 +56,10 @@ int Camera::init_device(void){
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_H264;
     fmt.fmt.pix.field = V4L2_FIELD_ANY;
     
+    if(xioctl(fd, VIDIOC_S_FMT, &fmt) == -1) {
+        fprintf(stderr, "%s error %d, %s\n", "VIDIOC_S_FMT", errno, strerror(errno));
+        return -1;
+    }
+
+    
 }
