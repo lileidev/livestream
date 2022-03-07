@@ -9,6 +9,7 @@ Camera::Camera() : dev_name("/dev/video0")
 Camera::~Camera() {
     uninit_device();
     close_device();
+    free(buffers);  // release allocated resources
 }
 
 int Camera::open_device(void){
@@ -105,8 +106,6 @@ int Camera::uninit_device(void){
         }
     }
 
-    free(buffers);
-
     return 0;
 }
 
@@ -159,25 +158,6 @@ int Camera::init_mmap(){
             fprintf(stderr, "%s error %d, %s\n", "mmap", errno, strerror(errno));
             return -1;
         }
-    }
-
-    return 0;
-}
-
-int Camera::init_read(unsigned int buffer_size){
-    buffers = (struct buffer*)calloc(1, sizeof(*buffers));
-
-    if(!buffers){
-        fprintf(stderr, "Out of memory\n");
-        return -1;
-    }   
-
-    buffers[0].length = buffer_size;
-    buffers[0].start = malloc(buffer_size);
-
-    if(!buffers[0].start){
-        fprintf(stderr, "Out of memory\n");
-        return -1;
     }
 
     return 0;

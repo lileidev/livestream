@@ -43,7 +43,6 @@ public:
     int stop_capturing(void);
     int start_capturing(void);
     int uninit_device(void);
-    int init_read(unsigned int buffer_size);
     int init_mmap(void);
     int init_device(void);
     int close_device(void);
