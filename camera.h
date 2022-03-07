@@ -35,12 +35,13 @@ struct buffer {
 
 class Camera {
 public:
-    Camera() : dev_name("/dev/video0") {};
+    Camera();
     Camera(const string name) : dev_name(name) {};
+    ~Camera();
     void process_image(const void *p, int size);
     int read_frame(void);
-    void stop_capturing(void);
-    void start_capturing(void);
+    int stop_capturing(void);
+    int start_capturing(void);
     int uninit_device(void);
     int init_read(unsigned int buffer_size);
     int init_mmap(void);

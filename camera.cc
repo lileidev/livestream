@@ -1,5 +1,16 @@
 #include "camera.h"
 
+Camera::Camera() : dev_name("/dev/video0")
+{
+    if(open_device() == -1) exit(-1);
+    if(init_device() == -1) exit(-1);
+}
+
+Camera::~Camera() {
+    uninit_device();
+    close_device();
+}
+
 int Camera::open_device(void){
     struct stat st;
     if(stat(dev_name.c_str(), &st) == -1){
@@ -166,6 +177,44 @@ int Camera::init_read(unsigned int buffer_size){
 
     if(!buffers[0].start){
         fprintf(stderr, "Out of memory\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int Camera::start_capturing(void){
+    unsigned int i;
+    enum v4l2_buf_type type;
+
+    for(i = 0; i < n_buffers; ++i){
+        struct v4l2_buffer buf;
+        
+        CLEAR(buf);
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = i;
+
+        if(xioctl(fd, VIDIOC_QBUF, &buf) == -1){
+            fprintf(stderr, "%s error %d, %s\n", "VIDIOC_QBUF", errno, strerror(errno));
+            return -1;
+        } 
+    }
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if(xioctl(fd, VIDIOC_STREAMON, &type) == -1){
+        fprintf(stderr, "%s error %d, %s\n", "VIDIOC_STREAMON", errno, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int Camera::stop_capturing(void){
+    enum v4l2_buf_type type;
+
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if(xioctl(fd, VIDIOC_STREAMOFF, &type) == -1){
+        fprintf(stderr, "%s error %d, %s\n", "VIDIOC_STREAMOFF", errno, strerror(errno));
         return -1;
     }
 
