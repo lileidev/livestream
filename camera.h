@@ -8,6 +8,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -36,9 +37,9 @@ struct buffer {
 class Camera {
 public:
     Camera();
-    Camera(const string name) : dev_name(name) {};
+    Camera(const string name);
     ~Camera();
-    void process_image(const void *p, int size);
+    // void process_image(const void *p, int size);
     int read_frame(void);
     int stop_capturing(void);
     int start_capturing(void);
@@ -47,6 +48,7 @@ public:
     int init_device(void);
     int close_device(void);
     int open_device(void);
+    int mainloop(void);
 
 private:
     string dev_name;

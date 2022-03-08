@@ -1,10 +1,15 @@
 #include "camera.h"
 
-Camera::Camera() : dev_name("/dev/video0")
-{
+Camera::Camera() : dev_name("/dev/video0") {
     if(open_device() == -1) exit(-1);
     if(init_device() == -1) exit(-1);
 }
+
+Camera::Camera(const string name) : dev_name(name) {
+    if(open_device() == -1) exit(-1);
+    if(init_device() == -1) exit(-1);
+}
+
 
 Camera::~Camera() {
     uninit_device();
@@ -196,6 +201,74 @@ int Camera::stop_capturing(void){
     if(xioctl(fd, VIDIOC_STREAMOFF, &type) == -1){
         fprintf(stderr, "%s error %d, %s\n", "VIDIOC_STREAMOFF", errno, strerror(errno));
         return -1;
+    }
+
+    return 0;
+}
+
+int Camera::read_frame(void){
+    struct v4l2_buffer buf;
+    unsigned int i;
+
+    CLEAR(buf);
+
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+
+    if(xioctl(fd, VIDIOC_DQBUF, &buf) == -1){
+        switch (errno)
+        {
+        case EAGAIN:
+            return 0;
+        case EIO:
+        default:
+            fprintf(stderr, "%s error %d, %s\n", "VIDIOC_DQBUF", errno, strerror(errno));
+            return -1;
+        }
+    }
+
+    assert(buf.index < n_buffers);
+    if(xioctl(fd, VIDIOC_QBUF, &buf)){
+        fprintf(stderr, "%s error %d, %s\n", "VIDIOC_QBUF", errno, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int Camera::mainloop(void){
+    unsigned int count; 
+
+    count = frame_count;
+
+    while(count-- > 0){
+        for(;;){
+            fd_set fds;
+            struct timeval tv;
+            int r;
+
+            FD_ZERO(&fds);
+            FD_SET(fd, &fds);
+
+            // Timeout
+            tv.tv_sec = 2;
+            tv.tv_usec = 0;
+
+            r = select(fd+1, &fds, NULL, NULL, &tv);
+
+            if(r == -1){
+                if(errno == EINTR) continue;
+                fprintf(stderr, "%s error %d, %s\n", "select", errno, strerror(errno));
+                return -1;
+            }
+
+            if(r == 0){
+                fprintf(stderr, "select timeout\n");
+                return -1;
+            }
+
+            if(read_frame()) break;
+        }
     }
 
     return 0;
