@@ -19,15 +19,7 @@ using std::string;
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
-int xioctl(int fh, int request, void *arg){
-    int r; 
-
-    do{
-        r = ioctl(fh, request, arg);
-    }while(r == -1 && errno == EINTR);
-
-    return r;
-}
+int xioctl(int fh, int request, void *arg);
 
 struct buffer {
         void   *start;

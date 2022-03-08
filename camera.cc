@@ -1,5 +1,15 @@
 #include "camera.h"
 
+int xioctl(int fh, int request, void *arg){
+    int r; 
+
+    do{
+        r = ioctl(fh, request, arg);
+    }while(r == -1 && errno == EINTR);
+
+    return r;
+}
+
 Camera::Camera() : dev_name("/dev/video0") {
     if(open_device() == -1) exit(-1);
     if(init_device() == -1) exit(-1);
@@ -20,18 +30,18 @@ Camera::~Camera() {
 int Camera::open_device(void){
     struct stat st;
     if(stat(dev_name.c_str(), &st) == -1){
-        fprintf(stderr, "Cannot identify '%s': %d, %s\n", dev_name, errno, strerror(errno));
+        fprintf(stderr, "Cannot identify '%s': %d, %s\n", dev_name.c_str(), errno, strerror(errno));
         return -1;
     }
 
     if(!S_ISCHR(st.st_mode)) {
-        fprintf(stderr, "%s is no device\n", dev_name);
+        fprintf(stderr, "%s is no device\n", dev_name.c_str());
         return -1;
     }
     
     fd = open(dev_name.c_str(), O_RDWR | O_NONBLOCK, 0);
     if(fd == -1) {
-        fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno, strerror(errno));
+        fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name.c_str(), errno, strerror(errno));
         return -1;
     }
 
@@ -41,7 +51,7 @@ int Camera::open_device(void){
 int Camera::close_device(void){
     if(close(fd) == -1)
     {
-        fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno, strerror(errno));
+        fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name.c_str(), errno, strerror(errno));
         return -1;
     }
 
@@ -60,7 +70,7 @@ int Camera::init_device(void){
 
     if(xioctl(fd, VIDIOC_QUERYCAP, &cap)){
         if(errno == EINVAL){
-            fprintf(stderr, "%s is no V4L2 device\n", dev_name);
+            fprintf(stderr, "%s is no V4L2 device\n", dev_name.c_str());
             return -1;
         }else{
             fprintf(stderr, "%s error %d, %s\n", "VIDIOC_QUERYCAP", errno, strerror(errno));
@@ -69,12 +79,12 @@ int Camera::init_device(void){
     }
 
     if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        fprintf(stderr, "%s is no video capture device\n", dev_name);
+        fprintf(stderr, "%s is no video capture device\n", dev_name.c_str());
         return -1;
     }
 
     if(!(cap.capabilities & V4L2_CAP_STREAMING)){
-        fprintf(stderr, "%s does not support streaming i/o\n", dev_name);
+        fprintf(stderr, "%s does not support streaming i/o\n", dev_name.c_str());
         return -1;
     }
 
@@ -99,6 +109,8 @@ int Camera::init_device(void){
         fmt.fmt.pix.sizeimage = min;
 
     init_mmap();
+
+    return 0;
 }
 
 int Camera::uninit_device(void){
@@ -125,7 +137,7 @@ int Camera::init_mmap(){
 
     if(xioctl(fd, VIDIOC_REQBUFS, &req)){
         if(errno == EINVAL) {
-            fprintf(stderr, "%s does not support memory mapping\n", dev_name);
+            fprintf(stderr, "%s does not support memory mapping\n", dev_name.c_str());
             return -1;
         } else {
             fprintf(stderr, "%s error %d, %s\n", "VIDIOC_REQBUFS", errno, strerror(errno));
@@ -134,7 +146,7 @@ int Camera::init_mmap(){
     }
 
     if(req.count < 2){
-        fprintf(stderr, "Insufficient buffer memory on %s\n", dev_name);
+        fprintf(stderr, "Insufficient buffer memory on %s\n", dev_name.c_str());
         return -1;
     }
 
