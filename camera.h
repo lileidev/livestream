@@ -31,6 +31,7 @@ public:
     Camera();
     Camera(const string name);
     ~Camera();
+    void initialize(void);
     // void process_image(const void *p, int size);
     int read_frame(void);
     int stop_capturing(void);

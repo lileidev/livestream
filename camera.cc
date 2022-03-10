@@ -11,13 +11,11 @@ int xioctl(int fh, int request, void *arg){
 }
 
 Camera::Camera() : dev_name("/dev/video0") {
-    if(open_device() == -1) exit(-1);
-    if(init_device() == -1) exit(-1);
+    initialize();
 }
 
 Camera::Camera(const string name) : dev_name(name) {
-    if(open_device() == -1) exit(-1);
-    if(init_device() == -1) exit(-1);
+    initialize();
 }
 
 
@@ -25,6 +23,14 @@ Camera::~Camera() {
     uninit_device();
     close_device();
     free(buffers);  // release allocated resources
+    fprintf(stderr, "Camera instance destroyed.\n");
+}
+
+void Camera::initialize(void){
+    if(open_device() == -1) exit(-1);
+    if(init_device() == -1) exit(-1);
+    if(start_capturing() == -1) exit(-1);
+    fprintf(stderr, "Camera instance initialized.\n");
 }
 
 int Camera::open_device(void){
